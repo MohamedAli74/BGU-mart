@@ -66,3 +66,13 @@ class Dao(object):
                .format(self._table_name,' AND '.join([col + '=?' for col in column_names]))
  
         self._conn.cursor().execute(stmt, params)
+
+    def update(self, dto_instance):
+        ins_dict = vars(dto_instance)
+        column_names = ','.join([f"{key}=?" for key in ins_dict.keys()])
+        params = list(ins_dict.values())
+
+        stmt = 'UPDATE {} SET {} WHERE id=?' \
+            .format(self._table_name, column_names)
+
+        self._conn.execute(stmt, params + [dto_instance.id])
