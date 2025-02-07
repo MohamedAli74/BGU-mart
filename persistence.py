@@ -1,39 +1,74 @@
 import sqlite3
 import atexit
 from dbtools import Dao
+from persistence import *
+
+import sys
+import os
  
 # Data Transfer Objects:
-class Employee(object):
-    #TODO: implement
-    pass
- 
-class Supplier(object):
-    #TODO: implement
-    pass
+class Employee:
+    def __init__(self, id, name, salary, branche):
+        self.id = id
+        self.name = name
+        self.salary = salary
+        self.branche = branche
 
-class Product(object):
-    #TODO: implement
-    pass
+    def __str__(self):
+        return f"({self.id}, '{self.name}', {self.salary}, {self.branche})"
 
-class Branche(object):
-    #TODO: implement
-    pass
+class Supplier:
+    def __init__(self, id, name, contact_information):
+        self.id = id
+        self.name = name
+        self.contact_information = contact_information
 
-class Activitie(object):
-    #TODO: implement
-    pass
- 
- 
-#Repository
-class Repository(object):
+    def __str__(self):
+        return f"({self.id}, '{self.name}', '{self.contact_information}')"
+
+class Product:
+    def __init__(self, id, description, price, quantity):
+        self.id = id
+        self.description = description
+        self.price = price
+        self.quantity = quantity
+
+    def __str__(self):
+        return f"({self.id}, '{self.description}', {self.price}, {self.quantity})"
+
+class Branche:
+    def __init__(self, id, location, number_of_employees):
+        self.id = id
+        self.location = location
+        self.number_of_employees = number_of_employees
+
+    def __str__(self):
+        return f"({self.id}, '{self.location}', {self.number_of_employees})"
+
+class Activitie:
+    def __init__(self, product_id, quantity, activator_id, date):
+        self.product_id = product_id
+        self.quantity = quantity
+        self.activator_id = activator_id
+        self.date = date
+
+    def __str__(self):
+        return f"({self.product_id}, {self.quantity}, {self.activator_id}, '{self.date}')"
+
+# Repository
+class Repository:
     def __init__(self):
         self._conn = sqlite3.connect('bgumart.db')
-        #TODO: complete
- 
+        self.employees = Dao(Employee, self._conn)
+        self.suppliers = Dao(Supplier, self._conn)
+        self.products = Dao(Product, self._conn)
+        self.branches = Dao(Branche, self._conn)
+        self.activities = Dao(Activitie, self._conn)
+
     def _close(self):
         self._conn.commit()
         self._conn.close()
- 
+
     def create_tables(self):
         self._conn.executescript("""
             CREATE TABLE employees (
@@ -42,7 +77,7 @@ class Repository(object):
                 salary          REAL        NOT NULL,
                 branche    INT REFERENCES branches(id)
             );
-    
+
             CREATE TABLE suppliers (
                 id                   INTEGER    PRIMARY KEY,
                 name                 TEXT       NOT NULL,
@@ -76,3 +111,38 @@ class Repository(object):
 # singleton
 repo = Repository()
 atexit.register(repo._close)
+
+def add_branche(splittedline: list[str]):
+    repo.branches.insert(Branche(*splittedline))
+
+def add_supplier(splittedline: list[str]):
+    repo.suppliers.insert(Supplier(*splittedline))
+
+def add_product(splittedline: list[str]):
+    repo.products.insert(Product(*splittedline))
+
+def add_employee(splittedline: list[str]):
+    repo.employees.insert(Employee(*splittedline))
+
+adders = {
+    "B": add_branche,
+    "S": add_supplier,
+    "P": add_product,
+    "E": add_employee
+}
+
+def main(args: list[str]):
+    inputfilename = args[1]
+    # delete the database file if it exists
+    repo._close()
+    if os.path.isfile("bgumart.db"):
+        os.remove("bgumart.db")
+    repo.__init__()
+    repo.create_tables()
+    with open(inputfilename) as inputfile:
+        for line in inputfile:
+            splittedline: list[str] = line.strip().split(",")
+            adders.get(splittedline[0])(splittedline[1:])
+
+if __name__ == '__main__':
+    main(sys.argv)
